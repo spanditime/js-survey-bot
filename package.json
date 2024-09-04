@@ -1,0 +1,15 @@
+{
+  "name": "psynet",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Frolov Eugene (spanditime)",
+  "license": "MIT",
+  "description": "",
+  "devDependencies": {
+    "tslint": "^6.1.3",
+    "typescript": "^5.5.4"
+  }
+}
