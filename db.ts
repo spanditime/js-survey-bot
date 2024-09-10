@@ -25,7 +25,7 @@ class DB{
   }
   savePupil(source: string, id:number|undefined, pupil:Pupil):void{
     // if id is undefined append instead
-    this.appendPupil(source,pupil)
+    this.appendPupil(source,id,pupil)
     // var params: sheets_v4.Params$Resource$Spreadsheets$Batchupdate = {}
     //
     //

@@ -5,9 +5,20 @@ import { Pupil } from './dto'
 /*! conversation context ensures that the this.tg.chat !== undefined
  */
 
+const Cancel = 'Отмена'
+const Submit = 'Отправить'
+const ChangeName = 'Изменить имя'
+const ChangeAge = 'Изменить возраст'
+const ChangeContact = 'Изменить контактные данные'
 
-const cancelButton = Markup.button.text('Отмена');
+const EnterName = 'Введите ваше имя'
+const EnterAge = 'Введите ваш возраст'
+const EnterContact = 'Введите контактные данные'
+const Entered = 'Даные введены'
+
+const cancelButton = Markup.button.text(Cancel);
 export interface ConversationContext{
+  showWelcomeMessage: boolean
   cancelConversation: boolean
   propagate: boolean;
   tg: TGContext;
@@ -24,11 +35,14 @@ class SurveyConversationHandler{
       return;
     }
 
-    if(ctx.tg.text === 'Отмена'){
+    if(ctx.tg.text === Cancel){
       if(!this.editMode){
+        ctx.showWelcomeMessage = true;
         ctx.cancelConversation = true;
-        ctx.propagate = true;
         return;
+      }else{
+        this.editMode = false;
+        this.state = 'submit';
       }
     }
 
@@ -42,24 +56,25 @@ class SurveyConversationHandler{
       this.contact = ctx.tg.text;
       this.state = 'submit';
     }else if(this.state === 'submit'){
-      if(ctx.tg.text === 'Отправить'){
+      if(ctx.tg.text === Submit){
         // todo: save to docs
-        console.log(this);
         var pupil: Pupil = {
           name: this.name,
           age: this.age,
           contact: this.contact,
         }
         db.savePupil("tg", ctx.tg.from?.id, pupil)
+        ctx.tg.reply("data submitted")
         ctx.cancelConversation = true;
+        ctx.showWelcomeMessage = true;
         return;
-      }else if(ctx.tg.text === 'Изменить имя'){
+      }else if(ctx.tg.text === ChangeName){
         this.state = 'name';
         this.editMode = true;
-      }else if(ctx.tg.text === 'Изменить возраст'){
+      }else if(ctx.tg.text === ChangeAge){
         this.state = 'age';
         this.editMode = true;
-      }else if(ctx.tg.text === 'Изменить контактные данные'){
+      }else if(ctx.tg.text === ChangeContact){
         this.state = 'contact';
         this.editMode = true;
       }
@@ -74,7 +89,7 @@ class SurveyConversationHandler{
   showCurrentStateQuestion(ctx: ConversationContext){
     switch(this.state){
       case 'name':
-        ctx.tg.reply('Введите ваше имя:', 
+        ctx.tg.reply(EnterName, 
           Markup.keyboard([
             Markup.button.text(`${ctx.tg.from?.first_name} ${ctx.tg.from?.last_name}`),
             cancelButton
@@ -82,14 +97,14 @@ class SurveyConversationHandler{
         );
         break;
       case 'age':
-        ctx.tg.reply('Введите ваш возвраст:',
+        ctx.tg.reply(EnterAge,
           Markup.keyboard([
             cancelButton
           ])
         );
         break;
       case 'contact':
-        ctx.tg.reply('Введите контактные данные:',
+        ctx.tg.reply(EnterContact,
           Markup.keyboard([
             Markup.button.text(`Tg: @${ctx.tg.from?.username}`),
             cancelButton
@@ -97,12 +112,13 @@ class SurveyConversationHandler{
         );
         break;
       case 'submit':
-        ctx.tg.replyWithMarkdownV2(`**Введены данные**\n**Имя:** ${this.name}\n**Возраст:** ${this.age}\n**Контакты:** ${this.contact}`, Markup.keyboard([
-          Markup.button.text('Отправить'),
-          Markup.button.text('Изменить имя'),
-          Markup.button.text('Изменить возраст'),
-          Markup.button.text('Изменить контактные данные'),
-          cancelButton
+        ctx.tg.replyWithMarkdownV2(Entered + `\n**Имя:** ${this.name}\n**Возраст:** ${this.age}\n**Контакты:** ${this.contact}`,
+          Markup.keyboard([
+            Markup.button.text(Submit),
+            Markup.button.text(ChangeName),
+            Markup.button.text(ChangeAge),
+            Markup.button.text(ChangeContact),
+            cancelButton
         ]))
         break;
     }
@@ -126,6 +142,7 @@ export class MainConversationHandler{
 
   handle(ctx:TGContext):void{
     var convctx = {
+      showWelcomeMessage:false,
       cancelConversation:false,
       tg: ctx,
       propagate: false
@@ -136,6 +153,9 @@ export class MainConversationHandler{
         handler.handle(convctx);
         if(convctx.cancelConversation){
           this.conversations.delete(ctx.chat.id)
+          if(convctx.showWelcomeMessage){
+            this.showInfoMessage(convctx)
+          }
           return;
         }
         if(!convctx.propagate){
