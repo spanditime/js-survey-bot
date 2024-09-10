@@ -12,6 +12,7 @@ services:
       BOT_TOKEN: '/home/node/bot_token.json'
       SHEET_ID: '<id>'
       GAUTH_KEY: '<path>'
+      LIST: '<list>'
     configs:
       - source: bot_token.json
         target: '/home/node/bot_token.json'

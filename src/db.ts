@@ -37,7 +37,7 @@ class DB{
     params.spreadsheetId = this.sid
     params.requestBody = {}
     params.requestBody.values = [[source, id, pupil.name, pupil.age, pupil.contact]]
-    params.range = 'list!A:A'
+    params.range = this.list + '!A:A'
     params.valueInputOption = 'RAW'
 
     this.sheet.spreadsheets.values.append(params)
@@ -65,7 +65,9 @@ class DB{
       })
     }
   }
-  constructor(keyFile: string | undefined, _sid: string | undefined, broker: string | undefined){
+  constructor(keyFile: string | undefined, _sid: string | undefined, broker: string | undefined, _list: string | undefined){
+    if(_list === undefined) throw new Error("list is not provided")
+    this.list = _list!
     this.auth = new google.auth.GoogleAuth({
       keyFile: keyFile,
       scopes: ["https://www.googleapis.com/auth/spreadsheets"]
@@ -89,6 +91,7 @@ class DB{
   auth: any
   sheet: sheets_v4.Sheets
   sid: string
+  list: string
 }
 
-export const db = new DB(process.env.GAUTH_KEY,process.env.SHEET_ID,process.env.KAFKA_BROKER)
+export const db = new DB(process.env.GAUTH_KEY,process.env.SHEET_ID,process.env.KAFKA_BROKER, process.env.LIST)
