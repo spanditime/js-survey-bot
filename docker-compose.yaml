@@ -1,0 +1,18 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    ports:
+      - '9092:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+  surveybot:
+    build: ./
+    environment:
+      KAFKA_BROKER: 'localhost:9092'
+      BOT_TOKEN: '/home/node/bot_token.json'
+      SHEET_ID: '<id>'
+      GAUTH_KEY: '<path>'
+    configs:
+      - source: bot_token.json
+        target: '/home/node/bot_token.json'
+
