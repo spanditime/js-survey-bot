@@ -4,32 +4,23 @@ import { google, GoogleApis, sheets_v4 } from 'googleapis'
 import {Kafka, KafkaConfig, Producer, Message } from 'kafkajs'
 
 class DB{
-  getPupil(source:string, id:number|undefined): (Pupil | undefined){
+  async getPupil(source:string, id:number|undefined): Promise<Pupil | undefined>{
     if(id === undefined){
       return undefined;
     }
-    var params: sheets_v4.Params$Resource$Spreadsheets$Developermetadata$Search= {}
-    params.auth = this.auth
-    params.spreadsheetId = this.sid
-    params.requestBody = {}
-    params.requestBody.dataFilters = [{
-      developerMetadataLookup : {
-        locationType: 'ROW',
-        metadataKey: 'source',
-        metadataValue: source,
-      }
-    }];
-    this.sheet.spreadsheets.developerMetadata.search(params)
-
+    var params: sheets_v4.Params$Resource$Spreadsheets$Values$Get = {
+      auth: this.auth,
+      spreadsheetId: this.sid,
+      range:this.list
+    }
+    var response = await this.sheet.spreadsheets.values.get(params)
+    // var prow = response.result
     return undefined
   }
   savePupil(source: string, id:number|undefined, pupil:Pupil):void{
     // if id is undefined append instead
+    
     this.appendPupil(source,id,pupil)
-    // var params: sheets_v4.Params$Resource$Spreadsheets$Batchupdate = {}
-    //
-    //
-    // this.sheet.spreadsheets.batchUpdate(params)
   }
   appendPupil(source:string, id:number|undefined, pupil:Pupil):void{
     var params: sheets_v4.Params$Resource$Spreadsheets$Values$Append = {}
@@ -83,8 +74,9 @@ class DB{
       this.kafka = new Kafka(kafkaConfig)
       this.producer = this.kafka.producer()
       this.producer.connect()
-    }else 
+    }else {
       throw new Error("No kafka broker provided")
+    }
   }
   producer: Producer | undefined
   kafka: Kafka | undefined
