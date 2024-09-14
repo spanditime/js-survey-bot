@@ -1,5 +1,4 @@
-import { GeneratedAPIs } from 'googleapis/build/src/apis'
-import { Pupil } from './dto'
+import { Pupil } from './trpc-router'
 import { google, GoogleApis, sheets_v4 } from 'googleapis'
 import {Kafka, KafkaConfig, Producer, Message } from 'kafkajs'
 
@@ -8,53 +7,44 @@ class DB{
     if(id === undefined){
       return undefined;
     }
-    var params: sheets_v4.Params$Resource$Spreadsheets$Values$Get = {
-      auth: this.auth,
-      spreadsheetId: this.sid,
-      range:this.list
-    }
-    var response = await this.sheet.spreadsheets.values.get(params)
-    // var prow = response.result
+    // var params: sheets_v4.Params$Resource$Spreadsheets$Values$Get = {
+    //   auth: this.auth,
+    //   spreadsheetId: this.sid,
+    //   range:this.list
+    // }
+    // var response = await this.sheet.spreadsheets.values.get(params)
+    // // var prow = response.result
     return undefined
   }
-  savePupil(source: string, id:number|undefined, pupil:Pupil):void{
-    // if id is undefined append instead
-    
-    this.appendPupil(source,id,pupil)
-  }
-  appendPupil(source:string, id:number|undefined, pupil:Pupil):void{
-    var params: sheets_v4.Params$Resource$Spreadsheets$Values$Append = {}
-    params.auth = this.auth
-    params.spreadsheetId = this.sid
-    params.requestBody = {}
-    params.requestBody.values = [[source, id, pupil.name, pupil.age, pupil.contact]]
-    params.range = this.list + '!A:A'
-    params.valueInputOption = 'RAW'
-
-    this.sheet.spreadsheets.values.append(params)
+  async submit(pupil:Pupil):Promise<Pupil>{
+    // var params: sheets_v4.Params$Resource$Spreadsheets$Values$Append = {}
+    // params.auth = this.auth
+    // params.spreadsheetId = this.sid
+    // params.requestBody = {}
+    // params.requestBody.values = [[source, id, pupil.name, pupil.age, pupil.contact]]
+    // params.range = this.list + '!A:A'
+    // params.valueInputOption = 'RAW'
+    //
+    // await this.sheet.spreadsheets.values.append(params)
     if(this.producer !== undefined){
-      var key: string = source
-      if(id !== undefined){
-        key += id?.toString()
+      var key: string = pupil.source
+      if(pupil.id !== undefined){
+        key += pupil.id?.toString()
       }
       var event = {
-        type: "append",
-        source: source,
-        id: id,
+        type: "submit",
         pupil: pupil
       }
       var message: Message = {
         key: key,
         value: event.toString(),
-        headers: {
-          source: "tgbot"
-        }
       }
-      this.producer.send({
+      await this.producer.send({
         topic: "pupil",
         messages: [message],
       })
     }
+    return pupil
   }
   constructor(keyFile: string | undefined, _sid: string | undefined, broker: string | undefined, _list: string | undefined){
     if(_list === undefined) throw new Error("list is not provided")

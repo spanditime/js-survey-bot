@@ -1,7 +1,6 @@
 import { TGContext } from './context'
 import { Markup } from 'telegraf'
-import { db } from './db'
-import { Pupil } from './dto'
+import { Pupil, trpc } from './trpc-client'
 /*! conversation context ensures that the this.tg.chat !== undefined
  */
 
@@ -47,19 +46,15 @@ interface ConversationHandler{
   handle(ctx:ConversationContext):void;
 }
 
-interface SurveyConversationHandler extends ConversationHandler{
-  name: string | undefined;
-  age: string | undefined;
-  city: string | undefined;
-  request: string | undefined;
-  contact: string | undefined;
+interface SurveyConversationHandler<Type> extends ConversationHandler{
+  data: Type | undefined
 }
 
 
-type responseHandler = (current: SurveyConversationHandler, ctx:ConversationContext, response:string)=>void;
-type cancellationHandler = (current: SurveyConversationHandler, ctx:ConversationContext)=>void;
-class OptionsSurveyHandler implements SurveyConversationHandler{
-  constructor(startMessage:string|undefined, question:string, options:string[],cancelOption:string, extraOptions:boolean, cancel:cancellationHandler, handleResponse:responseHandler, last: SurveyConversationHandler|undefined, ctx: ConversationContext){
+type responseHandler<Type> = (current: SurveyConversationHandler<Type>, ctx:ConversationContext, response:string)=>void;
+type cancellationHandler<Type> = (current: SurveyConversationHandler<Type>, ctx:ConversationContext)=>void;
+class OptionsSurveyHandler<Type> implements SurveyConversationHandler<Type>{
+  constructor(startMessage:string|undefined, question:string, options:string[],cancelOption:string, extraOptions:boolean, cancel:cancellationHandler<Type>, handleResponse:responseHandler<Type>, last: SurveyConversationHandler<Type>|undefined, ctx: ConversationContext){
     this.cancel = cancel;
     this.handleResponse = handleResponse;
     this.startMessage = startMessage;
@@ -68,11 +63,7 @@ class OptionsSurveyHandler implements SurveyConversationHandler{
     this.cancelOption = cancelOption;
     this.extraOptions = extraOptions;
     // templates/generics?
-    this.name = last?.name;
-    this.age = last?.age;
-    this.city = last?.city;
-    this.request = last?.request;
-    this.contact = last?.contact;
+    this.data = last?.data;
 
     this.sendStartMessage(ctx);
     this.sendQuestion(ctx);
@@ -103,21 +94,17 @@ class OptionsSurveyHandler implements SurveyConversationHandler{
     var buttons = [...this.options,this.cancelOption].map((elem)=>Markup.button.text(elem))
     await ctx.tg.reply(this.question,Markup.keyboard(buttons));
   }
-  cancel:cancellationHandler;
-  handleResponse:responseHandler;
+  cancel:cancellationHandler<Type>;
+  handleResponse:responseHandler<Type>;
   cancelOption:string;
   options:string[];
   extraOptions:boolean;
   startMessage:string|undefined;
   question:string;
-  name:string|undefined;
-  age:string|undefined;
-  city:string|undefined;
-  contact:string|undefined;
-  request:string|undefined;
+  data:Type|undefined;
 }
 
-function createOptionsQuestionMapped(startMessage:string|undefined,question:string, optionsHandlers: Map<string, (current:SurveyConversationHandler,ctx:ConversationContext)=>void> ,cancelOption: string,cancel: cancellationHandler, last:SurveyConversationHandler|undefined, ctx:ConversationContext) : ConversationHandler{
+function createOptionsQuestionMapped<Type>(startMessage:string|undefined,question:string, optionsHandlers: Map<string, (current:SurveyConversationHandler<Type>,ctx:ConversationContext)=>void> ,cancelOption: string,cancel: cancellationHandler<Type>, last:SurveyConversationHandler<Type>|undefined, ctx:ConversationContext) : ConversationHandler{
   var options = Array.from(optionsHandlers.keys())
   return new OptionsSurveyHandler(
     startMessage,
@@ -126,7 +113,7 @@ function createOptionsQuestionMapped(startMessage:string|undefined,question:stri
     cancelOption,
     false,
     cancel,
-    (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
+    (current:SurveyConversationHandler<Type>, ctx:ConversationContext, response:string)=>{
       var handler = optionsHandlers.get(response)
       if(handler !== undefined){
         handler(current,ctx);
@@ -137,54 +124,67 @@ function createOptionsQuestionMapped(startMessage:string|undefined,question:stri
   );
 }
 
-var defaultCancellationHandler = (current: SurveyConversationHandler, ctx:ConversationContext)=>{
+var defaultCancellationHandler = (current: SurveyConversationHandler<Pupil>, ctx:ConversationContext)=>{
   ctx.cancelConversation = true;
   ctx.showWelcomeMessage = true;
 };
+function createPupil(ctx:ConversationContext): Pupil{
+  return {
+    source: "tg",
+    id: ctx.tg.from?.id,
+    name: undefined,
+    city: undefined,
+    age: undefined, 
+    request: undefined,
+    contact: undefined
+  }
+}
 
-function createSubmitQuestion(current: SurveyConversationHandler, ctx:ConversationContext){
+function createSubmitQuestion(current: SurveyConversationHandler<Pupil>, ctx:ConversationContext){
   var message = `${Entered}
 ${EnterName}
-${current.name}
+${current.data?.name}
 
 ${EnterAge}
-${current.age}
+${current.data?.age}
 
 ${EnterCity}
-${current.city}
+${current.data?.city}
 
 ${EnterRequest}
-${current.request}
+${current.data?.request}
 
 ${EnterContact}
-${current.contact}
+${current.data?.contact}
 `;
   return createOptionsQuestionMapped(
     undefined,
     message,
-    new Map<string, (current:SurveyConversationHandler,ctx:ConversationContext)=>void>([
-      [ChangeName, (current:SurveyConversationHandler,ctx:ConversationContext)=>{
+    new Map<string, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>void>([
+      [ChangeName, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         var next = createNameQuestion(current,ctx,true);
         ctx.setNext(next);
       }],
-      [ChangeAge, (current:SurveyConversationHandler,ctx:ConversationContext)=>{
+      [ChangeAge, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         var next = createAgeQuestion(current,ctx,true);
         ctx.setNext(next);
       }],
-      [ChangeCity, (current:SurveyConversationHandler,ctx:ConversationContext)=>{
+      [ChangeCity, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         var next = createCityQuestion(current,ctx,true);
         ctx.setNext(next);
       }],
-      [ChangeRequest, (current:SurveyConversationHandler,ctx:ConversationContext)=>{
+      [ChangeRequest, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         var next = createRequestQuestion(current,ctx,true);
         ctx.setNext(next);
       }],
-      [ChangeContact, (current:SurveyConversationHandler,ctx:ConversationContext)=>{
+      [ChangeContact, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         var next = createContactQuestion(current,ctx,true);
         ctx.setNext(next);
       }],
-      [Submit, (current:SurveyConversationHandler,ctx:ConversationContext)=>{
-        //todo:save 
+      [Submit, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
+        if(current.data !== undefined){
+          trpc.createOrUpdatePupil.query(current.data)
+        }
         ctx.tg.reply(Thanks)
         ctx.cancelConversation = true;
         ctx.showWelcomeMessage = true;
@@ -196,13 +196,16 @@ ${current.contact}
     ctx
   )
 }
-function createContactQuestion(current: SurveyConversationHandler, ctx:ConversationContext, edit:boolean){
+function createContactQuestion(current: SurveyConversationHandler<Pupil>, ctx:ConversationContext, edit:boolean){
   var options: string[] = []
   if(ctx.tg.from?.username !== undefined){
     options = [`@${ctx.tg.from?.username}`];
   }
-  var callback: responseHandler = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-    current.contact = response;
+  var callback: responseHandler<Pupil> = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+    if(current.data === undefined){
+      current.data = createPupil(ctx);
+    }
+    current.data.contact = response;
     var next = createSubmitQuestion(current, ctx);
     ctx.setNext(next)
   }
@@ -219,17 +222,23 @@ function createContactQuestion(current: SurveyConversationHandler, ctx:Conversat
   )
 }
 
-function createRequestQuestion(current: SurveyConversationHandler, ctx:ConversationContext, edit: boolean){
-  var callback:responseHandler
+function createRequestQuestion(current: SurveyConversationHandler<Pupil>, ctx:ConversationContext, edit: boolean){
+  var callback:responseHandler<Pupil>
   if(edit){
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.request = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.request = response;
       var next = createSubmitQuestion(current, ctx);
       ctx.setNext(next)
     }
   }else{
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.request = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.request = response;
       var next = createContactQuestion(current, ctx, false);
       ctx.setNext(next)
     }
@@ -246,17 +255,23 @@ function createRequestQuestion(current: SurveyConversationHandler, ctx:Conversat
     ctx
   )
 }
-function createCityQuestion(current: SurveyConversationHandler, ctx:ConversationContext, edit:boolean){
-  var callback:responseHandler
+function createCityQuestion(current: SurveyConversationHandler<Pupil>, ctx:ConversationContext, edit:boolean){
+  var callback:responseHandler<Pupil>
   if(edit){
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.city = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.city = response;
       var next = createSubmitQuestion(current, ctx);
       ctx.setNext(next)
     }
   }else{
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.city = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.city = response;
       var next = createRequestQuestion(current, ctx, false);
       ctx.setNext(next)
     }
@@ -273,17 +288,24 @@ function createCityQuestion(current: SurveyConversationHandler, ctx:Conversation
     ctx
   )
 }
-function createAgeQuestion(current: SurveyConversationHandler, ctx:ConversationContext, edit:boolean){
-  var callback:responseHandler
+
+function createAgeQuestion(current: SurveyConversationHandler<Pupil>, ctx:ConversationContext, edit:boolean){
+  var callback:responseHandler<Pupil>
   if(edit){
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.age = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.age = response;
       var next = createSubmitQuestion(current, ctx);
       ctx.setNext(next)
     }
   }else{
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.age = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.age = response;
       var next = createCityQuestion(current, ctx, false);
       ctx.setNext(next)
     }
@@ -301,17 +323,23 @@ function createAgeQuestion(current: SurveyConversationHandler, ctx:ConversationC
   )
 }
 
-function createNameQuestion(current: SurveyConversationHandler, ctx:ConversationContext, edit:boolean){
-  var callback:responseHandler
+function createNameQuestion(current: SurveyConversationHandler<Pupil>, ctx:ConversationContext, edit:boolean){
+  var callback:responseHandler<Pupil>
   if(edit){
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.name = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.name = response;
       var next = createSubmitQuestion(current, ctx);
       ctx.setNext(next)
     }
   }else{
-    callback = (current:SurveyConversationHandler, ctx:ConversationContext, response:string)=>{
-      current.name = response;
+    callback = (current:SurveyConversationHandler<Pupil>, ctx:ConversationContext, response:string)=>{
+      if(current.data === undefined){
+        current.data = createPupil(ctx);
+      }
+      current.data.name = response;
       var next = createAgeQuestion(current, ctx, false);
       ctx.setNext(next)
     }
@@ -337,8 +365,9 @@ function createSurveyHandler(ctx:ConversationContext):ConversationHandler{
   return createOptionsQuestionMapped(
     WelcomeMessage,
     GoToSurvey,
-    new Map<string, (current:SurveyConversationHandler,ctx:ConversationContext)=>void>([
-      [Yes, (current:SurveyConversationHandler,ctx:ConversationContext)=>{
+    new Map<string, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>void>([
+      [Yes, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
+        current.data = createPupil(ctx);
         var next =  createNameQuestion(current,ctx,false)
         ctx.setNext(next)
       }]

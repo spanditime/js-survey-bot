@@ -16,8 +16,11 @@
   },
   "dependencies": {
     "@trpc/client": "^11.0.0-rc.502",
+    "@trpc/server": "^11.0.0-rc.502",
+    "@types/gapi": "^0.0.47",
     "@types/node": "^22.5.3",
-    "telegraf": "^4.16.3",
-    "typegram": "^5.2.0"
+    "googleapis": "^144.0.0",
+    "kafkajs": "^2.2.4",
+    "zod": "^3.23.8"
   }
 }
