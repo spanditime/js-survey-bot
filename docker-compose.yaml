@@ -5,8 +5,8 @@ services:
       - '9092:9092'
     environment:
       KAFKA_BROKER_ID: 1
-  surveybot:
-    build: ./
+  tgbot:
+    build: ./tgbot
     environment:
       KAFKA_BROKER: 'localhost:9092'
       BOT_TOKEN: '/home/node/bot_token.json'
