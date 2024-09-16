@@ -1,6 +1,6 @@
 import { TGContext } from './context'
 import { Markup } from 'telegraf'
-import { Pupil, trpc } from './trpc-client'
+import { Pupil, db } from './db'
 /*! conversation context ensures that the this.tg.chat !== undefined
  */
 
@@ -183,7 +183,7 @@ ${current.data?.contact}
       }],
       [Submit, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         if(current.data !== undefined){
-          trpc.createOrUpdatePupil.mutate(current.data)
+          db.submit(current.data)
         }
         ctx.tg.reply(Thanks)
         ctx.cancelConversation = true;

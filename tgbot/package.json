@@ -17,6 +17,8 @@
   "dependencies": {
     "@trpc/client": "^11.0.0-rc.502",
     "@types/node": "^22.5.3",
+    "googleapis": "^144.0.0",
+    "kafkajs": "^2.2.4",
     "telegraf": "^4.16.3",
     "typegram": "^5.2.0"
   }

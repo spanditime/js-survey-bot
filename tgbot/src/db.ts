@@ -1,7 +1,15 @@
-import { Pupil } from './trpc-router'
 import { google, GoogleApis, sheets_v4 } from 'googleapis'
 import {Kafka, KafkaConfig, Producer, Message } from 'kafkajs'
 
+export type Pupil = {
+  source: string,
+  id?: number|undefined,
+  name?: string|undefined,
+  city?: string|undefined,
+  request?: string|undefined,
+  contact?: string|undefined,
+  age?: string|undefined
+}
 class DB{
   async getPupil(source:string, id:number|undefined): Promise<Pupil | undefined>{
     if(id === undefined){
