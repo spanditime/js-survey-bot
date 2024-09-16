@@ -2,5 +2,6 @@ import { createHTTPServer } from '@trpc/server/adapters/standalone'
 import { surveyRouter } from './trpc-router'
 
 const server = createHTTPServer({router:surveyRouter});
-
-server.listen(3000)
+var port: number = 3000;
+if(process.env.PORT !== undefined) port = +process.env.PORT;
+server.listen(port)
