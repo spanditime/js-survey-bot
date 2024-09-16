@@ -17,15 +17,15 @@ class DB{
     return undefined
   }
   async submit(pupil:Pupil):Promise<Pupil>{
-    // var params: sheets_v4.Params$Resource$Spreadsheets$Values$Append = {}
-    // params.auth = this.auth
-    // params.spreadsheetId = this.sid
-    // params.requestBody = {}
-    // params.requestBody.values = [[source, id, pupil.name, pupil.age, pupil.contact]]
-    // params.range = this.list + '!A:A'
-    // params.valueInputOption = 'RAW'
-    //
-    // await this.sheet.spreadsheets.values.append(params)
+    var params: sheets_v4.Params$Resource$Spreadsheets$Values$Append = {}
+    params.auth = this.auth
+    params.spreadsheetId = this.sid
+    params.requestBody = {}
+    params.requestBody.values = [[pupil.source, pupil.id, pupil.name, pupil.age, pupil.city, pupil.request, pupil.contact]]
+    params.range = this.list
+    params.valueInputOption = 'RAW'
+
+    await this.sheet.spreadsheets.values.append(params)
     if(this.producer !== undefined){
       var key: string = pupil.source
       if(pupil.id !== undefined){

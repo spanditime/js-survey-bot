@@ -34,7 +34,7 @@ getPupil: pubProc.input(pupilSchema).query(async (opts) => {
   }),
 createOrUpdatePupil: pubProc.input(pupilSchema).mutation(async (opts) => {
     const { input } = opts
-    db.submit(input)
+    return db.submit(input)
   }),
 // deletePupil: (source: string, id: number) => void;
 });

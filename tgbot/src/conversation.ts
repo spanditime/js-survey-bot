@@ -183,7 +183,7 @@ ${current.data?.contact}
       }],
       [Submit, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         if(current.data !== undefined){
-          trpc.createOrUpdatePupil.query(current.data)
+          trpc.createOrUpdatePupil.mutate(current.data)
         }
         ctx.tg.reply(Thanks)
         ctx.cancelConversation = true;
