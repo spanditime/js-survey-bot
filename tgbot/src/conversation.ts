@@ -26,6 +26,7 @@ const EnterRequest = 'Пожалуйста, попробуйте описать 
 const EnterContact = 'Как мы можем связаться с вами? Просим оставить вас ссылку на соц. сети, почту или номер телефона (и предпочтительный тип связи по нему).'
 const Entered = 'Информация верна?'
 const Thanks = 'Благодарим за обращение! Мы рассмотрим заявку и свяжемся с Вами в течении недели или двух.'
+const CityNo = 'Нет. Только онлайн.'
 const Yes = 'Да'
 const No = 'Нет'
 
@@ -274,7 +275,7 @@ function createCityQuestion(current: SurveyConversationHandler<Pupil>, ctx:Conve
   return new OptionsSurveyHandler(
     undefined, 
     EnterCity,
-    [Yes],
+    [Yes, CityNo],
     Cancel,
     true,
     defaultCancellationHandler,
