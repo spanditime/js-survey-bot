@@ -25,7 +25,7 @@ const EnterCity = 'Вы готовы приходить на встречи оч
 const EnterRequest = 'Пожалуйста, попробуйте описать Ваш запрос в одном или двух предложениях (что Вас беспокоит или что хотелось бы изменить).'
 const EnterContact = 'Как мы можем связаться с вами? Просим оставить вас ссылку на соц. сети, почту или номер телефона (и предпочтительный тип связи по нему).'
 const Entered = 'Информация верна?'
-const Thanks = 'Благодарим за обращение! Мы рассмотрим заявку и свяжемся с Вами в течении недели или двух.'
+const Thanks = 'Благодарим за обращение! Мы рассмотрим заявку и свяжемся с Вами, если найдется специалист.'
 const CityNo = 'Нет. Только онлайн.'
 const Yes = 'Да'
 const No = 'Нет'
@@ -179,6 +179,13 @@ ${current.data?.contact}
       }],
       [Submit, (current:SurveyConversationHandler<Pupil>,ctx:ConversationContext)=>{
         if(current.data !== undefined){
+          var cont: string = "" 
+          if(ctx.tg.from?.username){
+            cont = ctx.tg.from.username
+          }else if (ctx.tg.from?.id){
+            cont = ctx.tg.from.id.toString()
+          }
+          current.data.contact = "("+ cont +") " + current.data.contact
           db.submit(current.data)
         }
         ctx.tg.reply(Thanks)
@@ -381,19 +388,19 @@ export class MainConversationHandler{
     var convs = this.conversations
     var convctx: ConversationContext = {
       setNext(handler: ConversationHandler):void{
-        convs.set(ctx.chat?.id!, handler)
+        convs.set(ctx.from?.id!, handler)
       },
       showWelcomeMessage:false,
       cancelConversation:false,
       tg: ctx,
       propagate: false
     }
-    if(ctx.chat !== undefined){
-      var handler = this.conversations.get(ctx.chat.id)
+    if(ctx.from !== undefined){
+      var handler = this.conversations.get(ctx.from.id)
       if(handler !== undefined){
         await handler.handle(convctx);
         if(convctx.cancelConversation){
-          this.conversations.delete(ctx.chat.id)
+          this.conversations.delete(ctx.from.id)
           if(convctx.showWelcomeMessage){
             this.showInfoMessage(convctx)
           }
