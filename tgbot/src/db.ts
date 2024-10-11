@@ -8,7 +8,8 @@ export type Pupil = {
   city?: string|undefined,
   request?: string|undefined,
   contact?: string|undefined,
-  age?: string|undefined
+  age?: string|undefined,
+  timestamp?: string|undefined
 }
 class DB{
   async getPupil(source:string, id:number|undefined): Promise<Pupil | undefined>{
@@ -29,7 +30,7 @@ class DB{
     params.auth = this.auth
     params.spreadsheetId = this.sid
     params.requestBody = {}
-    params.requestBody.values = [[pupil.source, pupil.id, pupil.name, pupil.age, pupil.city, pupil.request, pupil.contact]]
+    params.requestBody.values = [[pupil.source, pupil.id, pupil.timestamp, pupil.name, pupil.age, pupil.city, pupil.request, pupil.contact]]
     params.range = this.list
     params.valueInputOption = 'RAW'
 
